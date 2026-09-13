@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Práctica de Vocales Nasales en Francés</title>
+    <style>
+        :root {
+            --primary: #0055a5;
+            --secondary: #ef4135;
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --success: #28a745;
+            --warning: #ffc107;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        p.subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .phrase {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .nasals {
+            font-size: 0.9rem;
+            color: #666;
+            background-color: #f0f4f8;
+            padding: 6px 12px;
+            border-radius: 15px;
+            width: fit-content;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-listen {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-listen:hover {
+            background-color: #003f7d;
+        }
+
+        .btn-record {
+            background-color: var(--secondary);
+            color: white;
+        }
+
+        .btn-record:hover {
+            background-color: #c62b20;
+        }
+
+        .btn-record.recording {
+            animation: pulse 1.5s infinite;
+            background-color: #d32f2f;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .feedback {
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            display: none;
+        }
+
+        .feedback.show {
+            display: block;
+        }
+
+        .feedback-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .feedback-partial {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .feedback-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .user-text {
+            font-style: italic;
+            margin-top: 5px;
+        }
+
+        .not-supported {
+            color: red;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🇫🇷 Práctica de Vocales Nasales</h1>
+    <p class="subtitle">Escucha la pronunciación correcta y luego grábate para evaluar tu pronunciación.</p>
+
+    <div id="not-supported" class="not-supported">
+        Tu navegador no soporta la API de Reconocimiento de Voz. Se recomienda usar Google Chrome o Microsoft Edge.
+    </div>
+
+    <div class="container" id="phrases-container">
+        <!-- Las frases se generarán dinámicamente -->
+    </div>
+
+    <script>
+        const phrasesData = [
+            { text: "Un enfant chante dans le jardin.", nasals: "Nasales: [œ̃] (un), [ɑ̃] (en, an), [ɛ̃] (in)" },
+            { text: "Mon chien est très gentil.", nasals: "Nasales: [ɔ̃] (on), [ɛ̃] (ien, il)" },
+            { text: "Nous mangeons une orange ce matin.", nasals: "Nasales: [ɑ̃] (an, en), [ɔ̃] (ons), [ɛ̃] (in)" },
+            { text: "Il prend son crayon dans son sac.", nasals: "Nasales: [ɑ̃] (en, an), [ɔ̃] (on)" },
+            { text: "Le train arrive bientôt en gare.", nasals: "Nasales: [ɛ̃] (ain), [ɔ̃] (on), [ɑ̃] (en)" },
+            { text: "Un bon film commence ce soir.", nasals: "Nasales: [œ̃] (un), [ɔ̃] (on)" }
+        ];
+
+        // Verificar soporte para Reconocimiento de Voz
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            document.getElementById('not-supported').style.display = 'block';
+        }
+
+        const container = document.getElementById('phrases-container');
+
+        // Generar las tarjetas
+        phrasesData.forEach((data, index) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="phrase">${data.text}</div>
+                <div class="nasals">${data.nasals}</div>
+                <div class="controls">
+                    <button class="btn-listen" onclick="playAudio('${data.text}')">
+                        🔊 Escuchar
+                    </button>
+                    <button class="btn-record" id="record-btn-${index}" onclick="toggleRecording('${data.text}', ${index})">
+                        🎙️ Grabar y Comparar
+                    </button>
+                </div>
+                <div class="feedback" id="feedback-${index}"></div>
+            `;
+            container.appendChild(card);
+        });
+
+        // Función para reproducir el texto (Síntesis de voz)
+        function playAudio(text) {
+            if ('speechSynthesis' in window) {
+                // Cancelar audios anteriores
+                window.speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'fr-FR'; // Configurar en francés
+                utterance.rate = 0.85; // Velocidad un poco más lenta para facilitar el aprendizaje
+                
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("Tu navegador no soporta la reproducción de voz.");
+            }
+        }
+
+        // Reconocimiento de Voz
+        let activeRecognition = null;
+        let activeIndex = null;
+
+        function toggleRecording(targetText, index) {
+            if (!SpeechRecognition) {
+                alert("El reconocimiento de voz no está disponible en este navegador.");
+                return;
+            }
+
+            const recordBtn = document.getElementById(`record-btn-${index}`);
+
+            // Si ya está grabando la misma frase, la detenemos
+            if (activeRecognition && activeIndex === index) {
+                activeRecognition.stop();
+                return;
+            }
+
+            // Si está grabando otra frase, detenerla antes de iniciar una nueva
+            if (activeRecognition) {
+                activeRecognition.stop();
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'fr-FR';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onstart = function() {
+                activeRecognition = recognition;
+                activeIndex = index;
+                recordBtn.classList.add('recording');
+                recordBtn.innerHTML = '⏹️ Escuchando... (Habla ahora)';
+            };
+
+            recognition.onresult = function(event) {
+                const userTranscript = event.results[0][0].transcript;
+                evaluateSpeech(targetText, userTranscript, index);
+            };
+
+            recognition.onerror = function(event) {
+                showFeedback(index, "error", `Error en el reconocimiento: ${event.error}`);
+                resetButton(index);
+            };
+
+            recognition.onend = function() {
+                resetButton(index);
+                activeRecognition = null;
+                activeIndex = null;
+            };
+
+            recognition.start();
+        }
+
+        function resetButton(index) {
+            const recordBtn = document.getElementById(`record-btn-${index}`);
+            if (recordBtn) {
+                recordBtn.classList.remove('recording');
+                recordBtn.innerHTML = '🎙️ Grabar y Comparar';
+            }
+        }
+
+        // Normalizar texto para la comparación (quitar puntuación y minúsculas)
+        function normalizeText(text) {
+            return text
+                .toLowerCase()
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+                .trim();
+        }
+
+        // Comparar la pronunciación capturada con la frase original
+        function evaluateSpeech(targetText, userTranscript, index) {
+            const cleanTarget = normalizeText(targetText);
+            const cleanUser = normalizeText(userTranscript);
+
+            let feedbackClass = "";
+            let message = "";
+
+            if (cleanTarget === cleanUser) {
+                feedbackClass = "feedback-success";
+                message = "🎉 ¡Excelente pronunciación! Lo has dicho perfecto.";
+            } else {
+                // Calcular qué tan similar es la frase
+                const targetWords = cleanTarget.split(' ');
+                const userWords = cleanUser.split(' ');
+                
+                let matches = 0;
+                targetWords.forEach(word => {
+                    if (userWords.includes(word)) matches++;
+                });
+
+                const accuracy = matches / targetWords.length;
+
+                if (accuracy >= 0.6) {
+                    feedbackClass = "feedback-partial";
+                    message = "👍 ¡Muy bien! Casi lo consigues. Escucha la frase de nuevo y presta atención a las vocales nasales.";
+                } else {
+                    feedbackClass = "feedback-error";
+                    message = "❌ Sigue intentándolo. Asegúrate de pronunciar bien las vocales nasales.";
+                }
+            }
+
+            const feedbackText = `
+                <div>${message}</div>
+                <div class="user-text"><strong>Tu voz detectada:</strong> "${userTranscript}"</div>
+            `;
+
+            showFeedback(index, feedbackClass, feedbackText);
+        }
+
+        function showFeedback(index, className, content) {
+            const feedbackEl = document.getElementById(`feedback-${index}`);
+            feedbackEl.className = `feedback show ${className}`;
+            feedbackEl.innerHTML = content;
+        }
+    </script>
+</body>
+</html>
